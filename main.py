@@ -665,6 +665,9 @@ def copiar_con_progreso(origen, destino):
         print("[+] Disco copiado exitosamente.")
         return
 
+    is_tty = sys.stdout.isatty()
+    ultimo_pct_no_tty = -1
+
     try:
         with open(origen, "rb") as f_in, open(destino, "wb") as f_out:
             while True:
@@ -681,11 +684,6 @@ def copiar_con_progreso(origen, destino):
                     transcurrido = ahora - inicio
                     velocidad = (bytes_copiados / transcurrido) if transcurrido > 0 else 0
 
-                    ancho_barra = 25
-                    progreso = int((bytes_copiados / total_bytes) * ancho_barra)
-                    barra = "=" * max(0, progreso - 1) + (">" if progreso > 0 else "")
-                    barra = barra.ljust(ancho_barra)
-
                     str_copiado = formatear_tamano(bytes_copiados)
                     str_total = formatear_tamano(total_bytes)
                     str_vel = f"{formatear_tamano(velocidad)}/s"
@@ -697,14 +695,47 @@ def copiar_con_progreso(origen, destino):
                     else:
                         str_eta = "Listo"
 
-                    sys.stdout.write(
-                        f"\r[+] Progreso: [{barra}] {porcentaje:5.1f}% ({str_copiado}/{str_total}) {str_vel} {str_eta}   "
-                    )
-                    sys.stdout.flush()
+                    if is_tty:
+                        cols = shutil.get_terminal_size(fallback=(80, 24)).columns
+                        max_w = max(20, cols - 1)
+
+                        info = f"{porcentaje:5.1f}% ({str_copiado}/{str_total}) {str_vel} {str_eta}"
+                        prefix = "[+] Progreso: ["
+                        espacio_barra = max_w - len(prefix) - 2 - len(info)
+
+                        if espacio_barra < 5:
+                            info = f"{porcentaje:5.1f}% ({str_copiado}/{str_total}) {str_eta}"
+                            espacio_barra = max_w - len(prefix) - 2 - len(info)
+
+                        if espacio_barra < 5:
+                            info = f"{porcentaje:5.1f}% ({str_copiado}/{str_total})"
+                            espacio_barra = max_w - len(prefix) - 2 - len(info)
+
+                        if espacio_barra >= 5:
+                            ancho_barra = min(25, espacio_barra)
+                            progreso = int((bytes_copiados / total_bytes) * ancho_barra)
+                            if bytes_copiados >= total_bytes:
+                                barra = "=" * ancho_barra
+                            else:
+                                barra = "=" * max(0, progreso - 1) + (">" if progreso > 0 else "")
+                            barra = barra.ljust(ancho_barra)
+                            linea = f"{prefix}{barra}] {info}"
+                        else:
+                            linea = f"[+] Progreso: {porcentaje:5.1f}% ({str_copiado}/{str_total})"
+
+                        linea = linea[:max_w]
+                        sys.stdout.write(f"\r\033[K{linea}")
+                        sys.stdout.flush()
+                    else:
+                        pct_int = int(porcentaje // 10 * 10)
+                        if pct_int > ultimo_pct_no_tty or bytes_copiados >= total_bytes:
+                            ultimo_pct_no_tty = pct_int
+                            print(f"[+] Progreso: {porcentaje:5.1f}% ({str_copiado}/{str_total})")
 
         shutil.copystat(origen, destino)
-        sys.stdout.write("\n")
-        sys.stdout.flush()
+        if is_tty:
+            sys.stdout.write("\n")
+            sys.stdout.flush()
         print("[+] Disco copiado exitosamente.")
     except KeyboardInterrupt:
         print("\n\n[!] Copia cancelada por el usuario.")

@@ -32,7 +32,14 @@ def _safe_ask(self, patch_stdout=False, *args, **kwargs):
     return result
 Question.ask = _safe_ask
 
-QEMU_DIR = os.path.expanduser("~/qemu")
+KEMU_DIR = os.path.expanduser("~/kemu")
+_LEGACY_DIR = os.path.expanduser("~/qemu")
+if not os.path.exists(KEMU_DIR) and os.path.isdir(_LEGACY_DIR):
+    try:
+        shutil.move(_LEGACY_DIR, KEMU_DIR)
+    except Exception:
+        pass
+QEMU_DIR = KEMU_DIR
 
 
 def formatear_memoria_kb(kb):
@@ -808,12 +815,12 @@ def obtener_vms_existentes():
 
 def seleccionar_o_buscar_vm(nombre=None, prompt="Selecciona una VM:"):
     if not os.path.isdir(QEMU_DIR):
-        print("[Error] No existe el directorio ~/qemu/")
+        print("[Error] No existe el directorio ~/kemu/")
         sys.exit(1)
 
     vms = obtener_vms_existentes()
     if not vms:
-        print("[!] No hay VMs disponibles en ~/qemu/")
+        print("[!] No hay VMs disponibles en ~/kemu/")
         sys.exit(0)
 
     if not nombre:
@@ -829,7 +836,7 @@ def seleccionar_o_buscar_vm(nombre=None, prompt="Selecciona una VM:"):
     nombre_limpio = os.path.splitext(os.path.basename(nombre.strip()))[0]
     coincidencias = [item for item in vms if item["nombre"] == nombre or item["nombre"] == nombre_limpio]
     if not coincidencias:
-        print(f"[Error] No se encontró la VM '{nombre}' en ~/qemu/")
+        print(f"[Error] No se encontró la VM '{nombre}' en ~/kemu/")
         sys.exit(1)
 
     if len(coincidencias) == 1:
@@ -881,7 +888,7 @@ def cmd_start(nombre=None):
 
 def cmd_list():
     if not os.path.isdir(QEMU_DIR):
-        print("[+] No hay máquinas virtuales en ~/qemu/")
+        print("[+] No hay máquinas virtuales en ~/kemu/")
         return
 
     for os_folder in ("linux", "windows"):
@@ -1122,7 +1129,7 @@ def cmd_help():
                      El nombre se auto-deriva del archivo ISO.
 
    add [<disco>]     Agregar una VM desde un disco qcow2 existente
-                     Copia el disco a ~/qemu/<os>/ con barra de progreso y guarda la config.
+                     Copia el disco a ~/kemu/<os>/ con barra de progreso y guarda la config.
                      No inicia la VM (usa 'start' después).
                      El nombre se auto-deriva del archivo .qcow2.
 
@@ -1146,10 +1153,11 @@ def cmd_help():
    help              Mostrar esta ayuda
 
  ESTRUCTURA DE ARCHIVOS:
-   ~/qemu/
+   ~/kemu/
+   ├── ISO/             (imágenes .iso detectadas automáticamente)
    ├── linux/
-   │   ├── <vm>.qcow2       (disco virtual)
-   │   └── <vm>.json        (config: RAM, CPU, red)
+   │   ├── <vm>.qcow2   (disco virtual)
+   │   └── <vm>.json    (config: RAM, CPU, red)
    └── windows/
        ├── <vm>.qcow2
        └── <vm>.json

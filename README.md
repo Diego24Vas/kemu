@@ -138,7 +138,9 @@ kemu help
 
 Todas las máquinas virtuales se almacenan de manera organizada en:
 ```text
-~/qemu/
+~/kemu/
+├── ISO/
+│   └── ubuntu-24.04.iso  (imágenes descargadas para autodetectar)
 ├── linux/
 │   ├── mi-ubuntu.qcow2   (disco virtual dinámico)
 │   └── mi-ubuntu.json    (configuración de hardware y red)

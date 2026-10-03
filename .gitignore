@@ -218,3 +218,14 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Discos e imagenes virtuales QEMU / KVM
+*.qcow2
+*.iso
+*.img
+
+# IDEs y editores locales
+.vscode/
+.idea/
+*.swp
+*~
